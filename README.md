@@ -21,7 +21,7 @@ lalu hanya data itu yang diberikan ke model sebagai konteks.
                              Groq API
                                 ▲
  WhatsApp ◀──▶ whatsapp-web.js ─┘
-               server-v2.js (Express, proses Node.js PERSISTEN: lokal / VPS / Render)
+               server-v2.js (Express, proses Node.js PERSISTEN di komputer lokal)
 ```
 
 | Komponen | Lokasi | Hosting |
@@ -29,7 +29,7 @@ lalu hanya data itu yang diberikan ke model sebagai konteks.
 | Frontend | `public/` | Vercel (static) |
 | API katalog & chatbot | `api/*.js` | Vercel Functions |
 | Logika chatbot + RAG | `lib/chatbot.js`, `lib/rag.js` | dipakai Vercel & server-v2 |
-| WhatsApp Gateway | `server-v2.js` | **Tidak bisa di Vercel**: perlu proses yang hidup terus + Chromium |
+| WhatsApp Gateway | `server-v2.js` | Lokal (`npm start`). **Tidak bisa di Vercel**: perlu proses yang hidup terus + Chromium |
 
 `server-v2.js` juga melayani website dan semua endpoint API, jadi `npm start`
 menjalankan versi lengkap (website + chatbot + WhatsApp) di satu mesin.
@@ -106,7 +106,7 @@ Langkah:
 WhatsApp Web.js menjalankan Chromium dan menyimpan sesi login, jadi butuh proses
 Node.js yang hidup terus. **Jangan** dijalankan sebagai Vercel Function.
 
-### Opsi A: lokal (paling sederhana untuk demo)
+### Menjalankan gateway (lokal)
 ```bash
 npm start
 ```
@@ -118,14 +118,6 @@ Agar dashboard di Vercel juga bisa mengontrol bot lokal, buka tunnel
 (mis. `cloudflared tunnel --url http://localhost:3001`), lalu set di Vercel:
 `WA_GATEWAY_URL=<url tunnel>`; di `.env` lokal set `ADMIN_TOKEN` dan
 `ALLOWED_ORIGINS=https://glowberry-watsons-rag.vercel.app`.
-
-### Opsi B: Render (Docker)
-`Dockerfile` dan `render.yaml` sudah disiapkan (image Puppeteer resmi berisi Chrome).
-Di Render: New → Blueprint → pilih repo, lalu isi env yang bertanda `sync: false`.
-Keterbatasan paket gratis Render: layanan tidur setelah 15 menit tanpa trafik dan
-disk tidak persisten, sehingga sesi WhatsApp hilang saat restart dan QR harus
-dipindai ulang. Untuk sesi permanen dibutuhkan persistent disk (berbayar).
-Konfigurasi ini belum diuji di Render.
 
 ### Endpoint gateway
 | Method | Path | Keterangan |

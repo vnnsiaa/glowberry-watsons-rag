@@ -73,6 +73,58 @@ test("sunscreen murah -> hanya tabir surya, urut harga", () => {
   assert.ok(result[0].hargaAngka <= result[1].hargaAngka);
 });
 
+// ---------- Regression: pencarian harga tidak boleh mengabaikan filter merek/kategori ----------
+
+const isSortedAsc = list => list.every((p, i) => i === 0 || list[i - 1].hargaAngka <= p.hargaAngka);
+const isSortedDesc = list => list.every((p, i) => i === 0 || list[i - 1].hargaAngka >= p.hargaAngka);
+
+test("regression: 'Apa produk termurah?' = produk termurah dari seluruh katalog", () => {
+  const result = rag.search("Apa produk termurah?");
+  const min = Math.min(...rag.products.map(p => p.hargaAngka));
+  assert.equal(result[0].hargaAngka, min);
+  assert.ok(isSortedAsc(result));
+});
+
+test("regression: 'Apa produk termahal?' = produk termahal dari seluruh katalog", () => {
+  const result = rag.search("Apa produk termahal?");
+  const max = Math.max(...rag.products.map(p => p.hargaAngka));
+  assert.equal(result[0].hargaAngka, max);
+  assert.match(result[0].nama, /^Labore/);
+  assert.ok(isSortedDesc(result));
+});
+
+test("regression: 'Sunscreen murah' hanya Tabir Surya, urut termurah, dan lengkap", () => {
+  const result = rag.search("Sunscreen murah");
+  const allSun = rag.products.filter(p => p.kategori === "Tabir Surya");
+  assert.ok(result.length > 0);
+  assert.ok(result.every(p => p.kategori === "Tabir Surya"), result.map(p => p.nama).join(", "));
+  assert.ok(isSortedAsc(result));
+  assert.equal(result[0].hargaAngka, Math.min(...allSun.map(p => p.hargaAngka)));
+});
+
+test("regression: merek + harga tetap terfilter ke merek tersebut", () => {
+  const cheap = rag.search("Hada Labo termurah");
+  assert.equal(cheap.length, 4);
+  assert.ok(cheap.every(p => p.nama.startsWith("Hada Labo")));
+  assert.ok(isSortedAsc(cheap));
+  assert.equal(cheap[0].harga, "24.000");
+
+  const pricey = rag.search("cetaphil paling mahal");
+  assert.ok(pricey.every(p => p.nama.startsWith("Cetaphil")));
+  assert.ok(isSortedDesc(pricey));
+  assert.equal(pricey[0].harga, "205.500");
+});
+
+test("regression: harga dibandingkan numerik, bukan alfabetis", () => {
+  // Secara alfabetis "1.500" < "11.000" < "254.000" < "3.500"; secara numerik 3.500 harus sebelum 11.000
+  const result = rag.search("produk termurah");
+  const prices = result.map(p => p.hargaAngka);
+  assert.deepEqual(prices, [...prices].sort((a, b) => a - b));
+  const idx3500 = result.findIndex(p => p.harga === "3.500");
+  const idx11000 = result.findIndex(p => p.harga === "11.000");
+  assert.ok(idx3500 !== -1 && idx11000 !== -1 && idx3500 < idx11000);
+});
+
 test("pertanyaan tanpa produk & sapaan tidak mengambil konteks", () => {
   assert.deepEqual(rag.search("Bagaimana cara membeli produk?"), []);
   assert.deepEqual(rag.search("halo"), []);
