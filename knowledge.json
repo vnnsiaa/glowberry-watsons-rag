@@ -1,0 +1,16 @@
+{
+  "keywords": {
+    "jam buka": "jam buka",
+    "alamat": "alamat",
+    "lokasi": "alamat",
+    "cara pesan": "cara pesan",
+    "order": "cara pesan",
+    "kontak": "kontak"
+  },
+  "responses": {
+    "jam buka": "Toko kami buka setiap hari Senin - Sabtu pukul 09.00 - 20.00 WIB, dan Minggu pukul 10.00 - 17.00 WIB.",
+    "alamat": "Toko kami beralamat di Jl. Perhiasan No. 88, Pusat Emas & Permata, Jakarta.",
+    "cara pesan": "Untuk pemesanan, silakan sebutkan nama produk yang diinginkan atau pilih dari katalog kami, lalu konfirmasi pesanan melalui chat ini.",
+    "kontak": "Informasi Kontak Toko Aura Jewelry & Gold Atelier:\n📍 *Alamat:* Jl. Perhiasan No. 88, Pusat Emas & Permata, Jakarta\n📞 *Telepon / WA:* (021) 555-0199 / Chat WhatsApp ini\n⏰ *Jam Operasional:* Senin - Sabtu (09.00 - 20.00 WIB), Minggu (10.00 - 17.00 WIB)"
+  }
+}

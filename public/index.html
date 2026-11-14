@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fff5f6">
+  <meta name="description" content="Glowberry Beauty Store - Temukan produk beauty dan personal care pilihan Watsons.">
+  <title>Glowberry — Your Little Beauty Corner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="announcement">
+    <span>🍓</span> A little glow, a lot of happiness. Welcome to Glowberry!
+  </div>
+
+  <header class="navbar">
+    <a class="brand" href="#home">
+      <span class="brand-icon">✿</span>
+      <span>glowberry<small>YOUR LITTLE BEAUTY CORNER</small></span>
+    </a>
+
+    <nav class="nav-links">
+      <a href="#home">Home</a>
+      <a href="#products">Shop</a>
+      <a href="#about">About Us</a>
+    </nav>
+
+    <div class="nav-actions">
+      <a href="#products" class="nav-shop">Explore Shop <span>↗</span></a>
+      <button class="mobile-menu" id="mobileMenu" aria-label="Buka menu">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-content">
+        <div class="eyebrow"><span>✦</span> YOUR DAILY DOSE OF GLOW</div>
+        <h1>Find your glow,<br>find your <em>happy.</em></h1>
+        <p>Little things that make you feel beautiful. Explore your favorite beauty and personal care essentials in one lovely place.</p>
+        <div class="hero-buttons">
+          <a href="#products" class="primary-btn">Explore Products <span>↗</span></a>
+          <a href="#about" class="text-btn">Get to know us →</a>
+        </div>
+        <div class="hero-note">
+          <span class="avatar-stack">🍓 🌷 ✨</span>
+          <span>Beauty essentials, happy moments.</span>
+        </div>
+      </div>
+      <div class="hero-art">
+        <div class="hero-circle"></div>
+        <div class="floating-note note-one">♡ little things, big glow</div>
+        <div class="hero-image">
+          <img src="https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19?w=900&auto=format&fit=crop&q=85" alt="Beauty skincare collection">
+        </div>
+        <div class="floating-note note-two">✿ self-care club</div>
+        <span class="hero-sparkle sparkle-one">✦</span>
+        <span class="hero-sparkle sparkle-two">✧</span>
+      </div>
+      <div class="hero-bottom">MADE FOR YOUR EVERYDAY GLOW <span>✳</span> BEAUTY • CARE • HAPPINESS</div>
+    </section>
+
+    <section class="benefits">
+      <div><span>♡</span><p>Beauty essentials</p></div>
+      <div><span>✿</span><p>Everyday self-care</p></div>
+      <div><span>✧</span><p>Find your favorites</p></div>
+      <div><span>🍓</span><p>Shop with happiness</p></div>
+    </section>
+
+    <section class="products-section" id="products">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">THE GOOD STUFF ✿</div>
+          <h2>A little something<br>for your <em>everyday.</em></h2>
+        </div>
+        <p>Discover beauty, skincare, haircare, and personal care favorites from our Watsons Shopee catalog.</p>
+      </div>
+
+      <div class="catalog-toolbar">
+        <div class="search-box">
+          <span>⌕</span>
+          <input id="productSearch" type="search" placeholder="Cari produk favoritmu..." aria-label="Cari produk">
+        </div>
+        <select id="sortProducts" aria-label="Urutkan produk">
+          <option value="default">Urutkan: Rekomendasi</option>
+          <option value="low">Harga terendah</option>
+          <option value="high">Harga tertinggi</option>
+          <option value="name">Nama A-Z</option>
+        </select>
+      </div>
+
+      <div class="category-filters" id="categoryFilters">
+        <button class="filter-chip active" data-category="all">All Products</button>
+      </div>
+
+      <div class="catalog-info">
+        <span id="productCount">Memuat koleksi Glowberry...</span>
+        <span>Curated with ♡</span>
+      </div>
+
+      <div class="product-grid" id="productGrid">
+        <div class="loading-products">🍓 Sedang menyiapkan koleksi cantik untukmu...</div>
+      </div>
+
+      <div class="empty-state hidden" id="emptyProducts">
+        <span>🌷</span>
+        <h3>Oops, belum ketemu!</h3>
+        <p>Coba kata kunci lainnya, Kak.</p>
+      </div>
+    </section>
+
+    <section class="chat-promo" id="about">
+      <div class="chat-promo-decoration">✳</div>
+      <div>
+        <div class="eyebrow">YOUR FRIENDLY BEAUTY BUDDY</div>
+        <h2>Not sure what<br>you're looking for?</h2>
+        <p>Ask Glowberry! Our little AI shopping buddy can help you discover products from the Watsons catalog.</p>
+        <button class="primary-btn" id="openChatPromo">Chat with Glowberry <span>♡</span></button>
+      </div>
+      <div class="promo-illustration">
+        <div class="promo-berry">🍓</div>
+        <div class="promo-bubble">Hi, Kak! Need a little help? ♡</div>
+        <span>✧</span>
+      </div>
+    </section>
+
+    <section class="about-strip">
+      <div class="about-mark">g.</div>
+      <div>
+        <h3>Small discoveries, lovely days.</h3>
+        <p>Glowberry is a beauty shopping experience featuring products from the Watsons Shopee catalog.</p>
+      </div>
+      <a href="#products">Explore the collection ↗</a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a class="brand footer-brand" href="#home">
+      <span class="brand-icon">✿</span>
+      <span>glowberry<small>YOUR LITTLE BEAUTY CORNER</small></span>
+    </a>
+    <p>Made with ♡ for your everyday glow.</p>
+    <span>© 2026 Glowberry</span>
+  </footer>
+
+  <!-- Floating AI Chat -->
+  <button class="chat-launcher" id="chatLauncher" aria-label="Buka chatbot">
+    <span>✦</span>
+    <span class="launcher-text">Ask Glowberry</span>
+  </button>
+
+  <section class="chat-window hidden" id="chatWindow" aria-label="Glowberry AI Chat">
+    <div class="chat-header">
+      <div class="chat-avatar">🍓</div>
+      <div class="chat-header-info">
+        <strong>Glowberry Assistant</strong>
+        <span><i></i> Here to help you glow</span>
+      </div>
+      <button id="closeChat" class="close-chat" aria-label="Tutup chat">×</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="message bot-message">
+        <div class="message-avatar">🍓</div>
+        <div class="message-content">
+          Hai Kak! Welcome to Glowberry! 💗<br><br>
+          Aku bisa bantu cari produk, cek harga, atau menemukan beauty essentials dari katalog Watsons. Mau cari apa hari ini?
+        </div>
+      </div>
+    </div>
+
+    <div class="quick-prompts">
+      <button data-prompt="Apa saja produk Hada Labo?">Produk Hada Labo</button>
+      <button data-prompt="Apa produk paling murah?">Produk termurah</button>
+      <button data-prompt="Ada rekomendasi moisturizer?">Moisturizer</button>
+    </div>
+
+    <form class="chat-input-area" id="chatForm">
+      <input id="chatInput" type="text" placeholder="Tanya sesuatu ke Glowberry..." autocomplete="off">
+      <button type="submit" id="sendChat" aria-label="Kirim pesan">➤</button>
+    </form>
+    <div class="chat-disclaimer">Glowberry AI · Informasi berdasarkan katalog produk</div>
+  </section>
+
+  <!-- Admin tools retained from original project -->
+  <details class="admin-panel">
+    <summary>⚙ Admin Dashboard · WhatsApp & Groq</summary>
+
+    <div class="admin-content">
+      <div class="admin-status">
+        <span class="status-indicator" id="statusDot"></span>
+        <strong id="statusText">Memeriksa status bot...</strong>
+      </div>
+
+      <div class="admin-buttons">
+        <button id="startBtn">Mulai Bot</button>
+        <button id="stopBtn">Hentikan Bot</button>
+        <button id="resetBtn">Reset Sesi WA</button>
+      </div>
+
+      <section id="qrSection" class="admin-card hidden">
+        <h3>Pindai QR WhatsApp</h3>
+        <p>Buka WhatsApp → Perangkat Tertaut → Tautkan Perangkat.</p>
+        <div id="qrcode">Menunggu kode QR...</div>
+      </section>
+
+      <section id="readySection" class="admin-card hidden">
+        <h3>✓ Bot Terhubung</h3>
+        <p>Nomor WhatsApp: <strong id="botNumberText">-</strong></p>
+      </section>
+
+      <section class="admin-card">
+        <div class="admin-card-heading">
+          <h3>Monitoring Kuota Groq AI</h3>
+          <button id="refreshQuotaBtn" class="secondary-btn">↻ Cek Kuota</button>
+        </div>
+        <div class="quota-grid">
+          <div><small>Sisa Request</small><strong id="groqReqRemaining">Memuat...</strong><div class="progress-bar-bg"><div id="groqReqBar" class="progress-bar-fill"></div></div><small id="groqReqReset">-</small></div>
+          <div><small>Sisa Token (TPM)</small><strong id="groqTokenRemaining">Memuat...</strong><div class="progress-bar-bg"><div id="groqTokenBar" class="progress-bar-fill tokens"></div></div></div>
+          <div><small>Model Groq</small><strong id="groqModelName">Memuat...</strong><small id="groqLastChecked">-</small></div>
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <h3>Basis Pengetahuan</h3>
+        <div id="knowledgeList" class="knowledge-tags">Memuat...</div>
+      </section>
+
+      <section class="admin-card">
+        <h3>Data Produk dari CSV</h3>
+        <div class="table-responsive">
+          <table>
+            <thead><tr><th>Nama Produk</th><th>Harga</th><th>Link</th></tr></thead>
+            <tbody id="productsBody"><tr><td colspan="3">Memuat...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </details>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

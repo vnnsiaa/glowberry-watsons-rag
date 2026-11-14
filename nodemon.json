@@ -1,0 +1,17 @@
+
+{
+  "watch": [
+    "server-v2.js",
+    "lib/",
+    ".env"
+  ],
+  "ignore": [
+    ".wwebjs_auth/**",
+    ".wwebjs_cache/**",
+    "public/**",
+    "knowledge.json",
+    "data/**",
+    "node_modules/**"
+  ],
+  "ext": "js,json,env"
+}
