@@ -1,9 +1,12 @@
-
+// Glowberry frontend
+// API katalog & chatbot selalu di origin yang sama (Vercel Functions atau server-v2.js).
+// WhatsApp Gateway bisa berada di server lain (lihat /api/config -> waGatewayUrl).
 const API = "";
 let allProducts = [];
 let activeCategory = "all";
 let botStatusTimer = null;
 let qrLastValue = null;
+let gatewayUrl = null; // null = gateway tidak tersedia, "" = origin yang sama
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -17,8 +20,13 @@ function escapeHTML(value = "") {
   })[char]);
 }
 
+function numericPrice(value) {
+  return Number(String(value || "0").replace(/[^\d]/g, "")) || 0;
+}
+
 function rupiah(value) {
-  const number = Number(String(value || "0").replace(/[^\d]/g, ""));
+  const number = numericPrice(value);
+  if (!number) return "Harga belum tersedia";
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
@@ -26,8 +34,28 @@ function rupiah(value) {
   }).format(number);
 }
 
-function numericPrice(value) {
-  return Number(String(value || "0").replace(/[^\d]/g, "")) || 0;
+// Hanya izinkan link Shopee https agar tidak ada URL berbahaya di href
+function safeShopeeUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:" && /(^|\.)shopee\.co\.id$/.test(parsed.hostname)) {
+      return parsed.href;
+    }
+  } catch {
+    // URL tidak valid
+  }
+  return null;
+}
+
+async function fetchJSON(url, options = {}) {
+  const response = await fetch(url, options);
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+  return { response, data };
 }
 
 // ===============================
@@ -38,36 +66,44 @@ async function loadProducts() {
   const grid = $("#productGrid");
 
   try {
-    const response = await fetch(`${API}/api/products`);
-    if (!response.ok) throw new Error("Gagal mengambil data produk");
+    const { response, data } = await fetchJSON(`${API}/api/products`);
+    if (!response.ok || !data || !Array.isArray(data.products)) {
+      throw new Error((data && data.error) || "Gagal mengambil data produk");
+    }
 
-    const result = await response.json();
-    allProducts = Array.isArray(result.products) ? result.products : [];
+    allProducts = data.products;
 
     renderCategories();
     renderProducts();
-
-    // Tabel admin
-    const tbody = $("#productsBody");
-    if (tbody) {
-      tbody.innerHTML = allProducts.map(product => `
-        <tr>
-          <td>${escapeHTML(product.nama)}</td>
-          <td>${escapeHTML(product.harga)}</td>
-          <td><a href="${escapeHTML(product.href)}" target="_blank" rel="noopener">Buka Shopee ↗</a></td>
-        </tr>
-      `).join("");
-    }
-
+    renderAdminProducts();
   } catch (error) {
-    console.error("Gagal memuat produk:", error);
+    console.warn("Gagal memuat produk:", error.message);
     grid.innerHTML = `
       <div class="loading-products">
-        Produk belum dapat dimuat. Pastikan backend Glowberry aktif.
+        Produk belum dapat dimuat. Silakan muat ulang halaman sebentar lagi ya, Kak.
       </div>
     `;
     $("#productCount").textContent = "Gagal memuat produk";
   }
+}
+
+function renderAdminProducts() {
+  const tbody = $("#productsBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = allProducts.map(product => {
+    const href = safeShopeeUrl(product.href);
+    return `
+      <tr>
+        <td>${escapeHTML(product.nama)}</td>
+        <td>${escapeHTML(product.kategori)}</td>
+        <td>${escapeHTML(rupiah(product.harga))}</td>
+        <td>${href
+          ? `<a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Buka Shopee ↗</a>`
+          : "-"}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 // ===============================
@@ -78,20 +114,21 @@ function renderCategories() {
   const container = $("#categoryFilters");
   if (!container) return;
 
-  const categories = [...new Set(
-    allProducts.map(p => p.kategori).filter(Boolean)
-  )];
+  const categories = [...new Set(allProducts.map(p => p.kategori).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "id"));
 
-  container.innerHTML = `
-    <button class="filter-chip ${activeCategory === "all" ? "active" : ""}"
-      data-category="all">All Products</button>
-    ${categories.map(category => `
-      <button class="filter-chip ${activeCategory === category ? "active" : ""}"
-        data-category="${escapeHTML(category)}">
-        ${escapeHTML(category)}
-      </button>
-    `).join("")}
-  `;
+  const chip = (value, label) => `
+    <button type="button" class="filter-chip ${activeCategory === value ? "active" : ""}"
+      data-category="${escapeHTML(value)}" aria-pressed="${activeCategory === value}">
+      ${escapeHTML(label)}
+    </button>`;
+
+  container.innerHTML =
+    chip("all", `All Products (${allProducts.length})`) +
+    categories.map(category => {
+      const count = allProducts.filter(p => p.kategori === category).length;
+      return chip(category, `${category} (${count})`);
+    }).join("");
 
   container.querySelectorAll("button").forEach(button => {
     button.addEventListener("click", () => {
@@ -109,19 +146,16 @@ function renderCategories() {
 function renderProducts() {
   const grid = $("#productGrid");
   const search = ($("#productSearch")?.value || "").toLowerCase().trim();
+  const terms = search.split(/\s+/).filter(Boolean);
   const sort = $("#sortProducts")?.value || "default";
 
-  let products = allProducts.filter(product => {
-    const searchable = [
-      product.nama,
-      product.kategori,
-      product.deskripsi
-    ].join(" ").toLowerCase();
+  const products = allProducts.filter(product => {
+    const searchable = [product.nama, product.kategori, product.deskripsi]
+      .join(" ")
+      .toLowerCase();
 
-    const matchesSearch = searchable.includes(search);
-    const matchesCategory =
-      activeCategory === "all" ||
-      product.kategori === activeCategory;
+    const matchesSearch = terms.every(term => searchable.includes(term));
+    const matchesCategory = activeCategory === "all" || product.kategori === activeCategory;
 
     return matchesSearch && matchesCategory;
   });
@@ -131,12 +165,10 @@ function renderProducts() {
   } else if (sort === "high") {
     products.sort((a, b) => numericPrice(b.harga) - numericPrice(a.harga));
   } else if (sort === "name") {
-    products.sort((a, b) => a.nama.localeCompare(b.nama));
+    products.sort((a, b) => a.nama.localeCompare(b.nama, "id"));
   }
 
-  $("#productCount").textContent =
-    `${products.length} produk ditemukan`;
-
+  $("#productCount").textContent = `${products.length} produk ditemukan`;
   $("#emptyProducts").classList.toggle("hidden", products.length !== 0);
 
   if (products.length === 0) {
@@ -144,46 +176,44 @@ function renderProducts() {
     return;
   }
 
-  grid.innerHTML = products.map((product, index) => {
+  grid.innerHTML = products.map(product => {
     const image = product.gambar || "";
-    const href = product.href || "#";
+    const href = safeShopeeUrl(product.href);
 
     return `
       <article class="product-card">
         <div class="product-image">
           <span class="product-tag">✿ Glowberry Pick</span>
-          <img
-            src="${escapeHTML(image)}"
-            alt="${escapeHTML(product.nama)}"
-            loading="lazy"
-            onerror="this.style.display='none'"
-          >
+          ${image
+            ? `<img src="${escapeHTML(image)}" alt="${escapeHTML(product.nama)}"
+                 loading="lazy" referrerpolicy="no-referrer">`
+            : ""}
+          <span class="product-image-fallback" aria-hidden="true">🍓</span>
         </div>
 
         <div class="product-info">
-          <div class="product-category">
-            ${escapeHTML(product.kategori || "Beauty & Care")}
-          </div>
-
-          <div class="product-name">
-            ${escapeHTML(product.nama)}
-          </div>
-
-          <div class="product-price">
-            ${rupiah(product.harga)}
-          </div>
+          <div class="product-category">${escapeHTML(product.kategori || "Beauty & Care")}</div>
+          <div class="product-name" title="${escapeHTML(product.nama)}">${escapeHTML(product.nama)}</div>
+          <div class="product-price">${escapeHTML(rupiah(product.harga))}</div>
 
           <div class="product-actions">
-            <a href="${escapeHTML(href)}"
-              target="_blank" rel="noopener"
-              class="buy-link">
-              Beli di Shopee ↗
-            </a>
+            ${href
+              ? `<a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer" class="buy-link">
+                   Beli di Shopee ↗
+                 </a>`
+              : `<span class="buy-link disabled">Link belum tersedia</span>`}
           </div>
         </div>
       </article>
     `;
   }).join("");
+
+  // Gambar rusak: sembunyikan <img> dan tampilkan ikon pengganti
+  grid.querySelectorAll(".product-image img").forEach(img => {
+    img.addEventListener("error", () => {
+      img.remove();
+    }, { once: true });
+  });
 }
 
 $("#productSearch")?.addEventListener("input", renderProducts);
@@ -208,14 +238,63 @@ $("#chatLauncher").addEventListener("click", openChat);
 $("#closeChat").addEventListener("click", closeChat);
 $("#openChatPromo").addEventListener("click", openChat);
 
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !$("#chatWindow").classList.contains("hidden")) {
+    closeChat();
+  }
+});
+
+// Render teks jawaban AI dengan aman: hanya **tebal** dan link Shopee yang diubah
+// menjadi elemen; selebihnya tetap teks biasa (tidak ada innerHTML dari AI).
+function renderRichText(container, text) {
+  const tokenPattern = /(\*\*[^*\n]+\*\*|https?:\/\/[^\s<>()]+)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tokenPattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+
+    const token = match[0];
+
+    if (token.startsWith("**")) {
+      const strong = document.createElement("strong");
+      strong.textContent = token.slice(2, -2);
+      container.appendChild(strong);
+    } else {
+      // Pisahkan tanda baca di akhir URL
+      const trimmed = token.replace(/[.,!?;:]+$/, "");
+      const trailing = token.slice(trimmed.length);
+      const href = safeShopeeUrl(trimmed);
+
+      if (href) {
+        const link = document.createElement("a");
+        link.href = href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "Lihat di Shopee ↗";
+        link.className = "chat-link";
+        container.appendChild(link);
+      } else {
+        container.appendChild(document.createTextNode(trimmed));
+      }
+      if (trailing) container.appendChild(document.createTextNode(trailing));
+    }
+
+    lastIndex = match.index + token.length;
+  }
+
+  if (lastIndex < text.length) {
+    container.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+}
+
 function addMessage(text, type = "bot") {
   const messages = $("#chatMessages");
   const message = document.createElement("div");
 
-  message.className =
-    type === "user"
-      ? "message user-message"
-      : "message bot-message";
+  message.className = type === "user" ? "message user-message" : "message bot-message";
 
   const avatar = document.createElement("div");
   avatar.className = "message-avatar";
@@ -224,12 +303,14 @@ function addMessage(text, type = "bot") {
   const content = document.createElement("div");
   content.className = "message-content";
 
-  // Text aman, tidak mengeksekusi HTML dari jawaban AI.
-  content.textContent = text;
+  if (type === "user") {
+    content.textContent = text;
+  } else {
+    renderRichText(content, text);
+  }
 
   message.append(avatar, content);
   messages.appendChild(message);
-
   messages.scrollTop = messages.scrollHeight;
 
   return message;
@@ -252,44 +333,47 @@ function addTyping() {
   return typing;
 }
 
-async function sendChatMessage(message) {
-  const text = message.trim();
-  if (!text) return;
+let chatBusy = false;
 
+async function sendChatMessage(message) {
+  const text = String(message || "").trim();
+  if (!text || chatBusy) return;
+
+  chatBusy = true;
   addMessage(text, "user");
 
   $("#chatInput").value = "";
   $("#sendChat").disabled = true;
+  document.querySelectorAll(".quick-prompts button").forEach(b => (b.disabled = true));
 
   const typing = addTyping();
 
   try {
-    const response = await fetch(`${API}/api/chat`, {
+    const { response, data } = await fetchJSON(`${API}/api/chat`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text })
     });
 
-    const result = await response.json();
+    typing.remove();
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || "Chatbot tidak dapat merespons.");
+    if (!response.ok || !data || !data.success) {
+      addMessage(
+        (data && data.error) ||
+        "Aduh Kak, Glowberry sedang gangguan. Coba tanyakan lagi sebentar ya! 💗"
+      );
+      return;
     }
 
-    typing.remove();
-    addMessage(result.reply || "Maaf Kak, aku belum mendapatkan jawaban.");
-
+    addMessage(data.reply || "Maaf Kak, aku belum mendapatkan jawaban.");
   } catch (error) {
     typing.remove();
-    console.error("Chatbot error:", error);
-
-    addMessage(
-      "Aduh Kak, sepertinya koneksi sedang terganggu. Coba tanyakan lagi sebentar ya! 💗"
-    );
+    console.warn("Chatbot error:", error.message);
+    addMessage("Aduh Kak, sepertinya koneksi sedang terganggu. Coba tanyakan lagi sebentar ya! 💗");
   } finally {
+    chatBusy = false;
     $("#sendChat").disabled = false;
+    document.querySelectorAll(".quick-prompts button").forEach(b => (b.disabled = false));
     $("#chatInput").focus();
   }
 }
@@ -300,9 +384,7 @@ $("#chatForm").addEventListener("submit", event => {
 });
 
 document.querySelectorAll(".quick-prompts button").forEach(button => {
-  button.addEventListener("click", () => {
-    sendChatMessage(button.dataset.prompt);
-  });
+  button.addEventListener("click", () => sendChatMessage(button.dataset.prompt));
 });
 
 // ===============================
@@ -310,24 +392,25 @@ document.querySelectorAll(".quick-prompts button").forEach(button => {
 // ===============================
 
 async function loadKnowledge() {
+  const container = $("#knowledgeList");
+  if (!container) return;
+
   try {
-    const response = await fetch(`${API}/api/knowledge`);
-    const data = await response.json();
+    const { response, data } = await fetchJSON(`${API}/api/knowledge`);
+    if (!response.ok || !data) throw new Error("Knowledge tidak tersedia");
 
-    const container = $("#knowledgeList");
-    if (!container) return;
-
+    const topics = Object.keys(data.responses || {});
     const keywords = Object.keys(data.keywords || {});
 
-    container.innerHTML = keywords.length
-      ? keywords.map(keyword =>
-          `<span class="tag-item">${escapeHTML(keyword)}</span>`
+    container.innerHTML = topics.length
+      ? `<p class="knowledge-summary">${topics.length} topik FAQ · ${keywords.length} kata kunci</p>` +
+        keywords.map(keyword =>
+          `<span class="tag-item" title="Topik: ${escapeHTML(data.keywords[keyword])}">${escapeHTML(keyword)}</span>`
         ).join("")
       : "<em>Tidak ada kata kunci manual.</em>";
-
   } catch (error) {
-    console.warn("Knowledge tidak dapat dimuat:", error);
-    $("#knowledgeList").textContent = "Data knowledge tidak tersedia.";
+    console.warn("Knowledge tidak dapat dimuat:", error.message);
+    container.textContent = "Data knowledge tidak tersedia.";
   }
 }
 
@@ -335,54 +418,89 @@ async function loadKnowledge() {
 // WHATSAPP GATEWAY ADMIN
 // ===============================
 
-async function loadBotStatus() {
+function gatewayEndpoint(path) {
+  return `${gatewayUrl}${path}`;
+}
+
+function adminHeaders() {
+  const token = sessionStorage.getItem("glowberryAdminToken");
+  return token ? { "X-Admin-Token": token } : {};
+}
+
+function setGatewayUnavailable(message) {
+  const dot = $("#statusDot");
+  dot.classList.remove("ready", "waiting");
+  $("#statusText").textContent = message;
+  $("#qrSection").classList.add("hidden");
+  $("#readySection").classList.add("hidden");
+  ["#startBtn", "#stopBtn", "#resetBtn"].forEach(id => ($(id).disabled = true));
+  $("#gatewayInfo").classList.remove("hidden");
+}
+
+async function loadConfig() {
   try {
-    const response = await fetch(`${API}/api/bot/status`);
-    const data = await response.json();
+    const { response, data } = await fetchJSON(`${API}/api/config`);
+    gatewayUrl = response.ok && data && typeof data.waGatewayUrl === "string"
+      ? data.waGatewayUrl
+      : null;
+  } catch {
+    gatewayUrl = null;
+  }
+}
 
-    const status = String(
-      data.status || data.state || ""
-    ).toLowerCase();
+async function loadBotStatus() {
+  if (gatewayUrl === null) {
+    setGatewayUnavailable("WhatsApp Gateway tidak aktif pada deployment ini");
+    return;
+  }
 
-    const ready = data.isReady === true ||
-      data.ready === true ||
-      status === "ready" ||
-      status === "connected";
+  try {
+    const { response, data } = await fetchJSON(gatewayEndpoint("/api/bot/status"));
+    if (!response.ok || !data) throw new Error("Status tidak tersedia");
 
+    ["#startBtn", "#stopBtn", "#resetBtn"].forEach(id => ($(id).disabled = false));
+    $("#gatewayInfo").classList.add("hidden");
+
+    const ready = data.isReady === true;
     const dot = $("#statusDot");
     dot.classList.toggle("ready", ready);
     dot.classList.toggle("waiting", !ready);
 
-    $("#statusText").textContent = ready
-      ? "Bot WhatsApp Terhubung"
-      : "Bot WhatsApp Belum Terhubung";
+    let status = "Bot WhatsApp Belum Terhubung";
+    if (ready) status = "Bot WhatsApp Terhubung";
+    else if (data.isCleaning) status = "Membersihkan sesi...";
+    else if (data.isInitializing) status = "Memulai bot, menunggu kode QR...";
+    else if (data.hasQRCode) status = "Menunggu pemindaian QR";
+    if (data.lastError) status += ` · ${data.lastError}`;
+    $("#statusText").textContent = status;
 
     $("#readySection").classList.toggle("hidden", !ready);
-    $("#qrSection").classList.toggle("hidden", ready);
+    $("#qrSection").classList.toggle("hidden", ready || !(data.hasQRCode || data.isInitializing));
+    $("#botNumberText").textContent = data.botNumber || "-";
 
-    if (data.number || data.phoneNumber) {
-      $("#botNumberText").textContent =
-        data.number || data.phoneNumber;
-    }
-
-    if (!ready) {
+    if (!ready && data.hasQRCode) {
       await loadQR();
+    } else if (!data.hasQRCode) {
+      qrLastValue = null;
+      $("#qrcode").textContent = "Menunggu kode QR...";
     }
-
   } catch (error) {
-    console.warn("Gagal mengecek status bot:", error);
-    $("#statusText").textContent = "Status bot tidak tersedia";
+    console.warn("Gagal mengecek status bot:", error.message);
+    setGatewayUnavailable("WhatsApp Gateway tidak dapat dihubungi");
   }
 }
 
 async function loadQR() {
   try {
-    const response = await fetch(`${API}/api/bot/qr`);
-    const data = await response.json();
+    const { response, data } = await fetchJSON(gatewayEndpoint("/api/bot/qr"), {
+      headers: adminHeaders()
+    });
 
-    if (!data.qr) return;
-
-    if (data.qr === qrLastValue) return;
+    if (response.status === 401) {
+      $("#qrcode").textContent = "Masukkan token admin (klik Mulai Bot) untuk melihat QR.";
+      return;
+    }
+    if (!data || !data.qr || data.qr === qrLastValue) return;
 
     qrLastValue = data.qr;
 
@@ -397,36 +515,46 @@ async function loadQR() {
         correctLevel: QRCode.CorrectLevel.M
       });
     } else {
-      qrContainer.textContent = data.qr;
+      qrContainer.textContent = "Library QR gagal dimuat. Lihat QR di terminal server.";
     }
-
   } catch (error) {
-    console.warn("QR belum tersedia:", error);
+    console.warn("QR belum tersedia:", error.message);
   }
 }
 
 async function botAction(endpoint, button, loadingText) {
+  if (gatewayUrl === null) return;
+
   const originalText = button.textContent;
   button.disabled = true;
   button.textContent = loadingText;
 
   try {
-    const response = await fetch(`${API}/api/bot/${endpoint}`, {
-      method: "POST"
+    let { response, data } = await fetchJSON(gatewayEndpoint(`/api/bot/${endpoint}`), {
+      method: "POST",
+      headers: adminHeaders()
     });
 
-    const result = await response.json();
-
-    if (!response.ok || result.success === false) {
-      throw new Error(result.error || "Operasi bot gagal.");
+    if (response.status === 401) {
+      const token = prompt("Masukkan ADMIN_TOKEN WhatsApp Gateway:");
+      if (!token) return;
+      sessionStorage.setItem("glowberryAdminToken", token.trim());
+      ({ response, data } = await fetchJSON(gatewayEndpoint(`/api/bot/${endpoint}`), {
+        method: "POST",
+        headers: adminHeaders()
+      }));
     }
 
-    alert(result.message || "Permintaan berhasil dikirim.");
-    await loadBotStatus();
+    if (!response.ok || !data || data.success === false) {
+      if (response.status === 401) sessionStorage.removeItem("glowberryAdminToken");
+      throw new Error((data && data.error) || "Operasi bot gagal.");
+    }
 
+    alert(data.message || "Permintaan berhasil dikirim.");
+    await loadBotStatus();
   } catch (error) {
     alert(error.message);
-    console.error(error);
+    console.warn(error.message);
   } finally {
     button.disabled = false;
     button.textContent = originalText;
@@ -442,7 +570,7 @@ $("#stopBtn").addEventListener("click", () => {
 });
 
 $("#resetBtn").addEventListener("click", () => {
-  if (confirm("Yakin ingin mereset sesi WhatsApp?")) {
+  if (confirm("Yakin ingin mereset sesi WhatsApp? Bot harus dipindai ulang.")) {
     botAction("reset", $("#resetBtn"), "Mereset...");
   }
 });
@@ -451,68 +579,63 @@ $("#resetBtn").addEventListener("click", () => {
 // GROQ QUOTA MONITOR
 // ===============================
 
+function percent(remaining, limit) {
+  if (!Number.isFinite(remaining) || !Number.isFinite(limit) || limit <= 0) return null;
+  return Math.max(0, Math.min(100, (remaining / limit) * 100));
+}
+
 async function loadGroqQuota(fresh = false) {
   try {
-    const response = await fetch(
+    const { response, data } = await fetchJSON(
       `${API}/api/groq/quota${fresh ? "?fresh=true" : ""}`
     );
+    if (!response.ok || !data) throw new Error("Kuota tidak tersedia");
 
-    const data = await response.json();
+    const fmt = value => (value === null || value === undefined ? "-" : Number(value).toLocaleString("id-ID"));
 
-    $("#groqReqRemaining").textContent =
-      data.remainingRequests ?? data.remaining_requests ?? "-";
+    $("#groqReqRemaining").textContent = data.remainingRequests !== null && data.remainingRequests !== undefined
+      ? `${fmt(data.remainingRequests)} / ${fmt(data.limitRequests)}`
+      : "-";
+    $("#groqTokenRemaining").textContent = data.remainingTokens !== null && data.remainingTokens !== undefined
+      ? `${fmt(data.remainingTokens)} / ${fmt(data.limitTokens)}`
+      : "-";
 
-    $("#groqTokenRemaining").textContent =
-      data.remainingTokens ?? data.remaining_tokens ?? "-";
+    $("#groqModelName").textContent = data.configured
+      ? data.model || "Model dari konfigurasi server"
+      : "Groq belum dikonfigurasi";
 
-    $("#groqModelName").textContent =
-      data.model || data.modelName ||
-      "Model dari konfigurasi server";
-
-    $("#groqReqReset").textContent =
-      data.resetRequests || data.reset_requests ||
-      "Informasi reset tidak tersedia";
+    $("#groqReqReset").textContent = data.resetRequests
+      ? `Reset: ${data.resetRequests}`
+      : fresh ? "Informasi reset tidak tersedia" : "Klik Cek Kuota untuk data terbaru";
 
     $("#groqLastChecked").textContent =
       "Pembaruan: " + new Date().toLocaleTimeString("id-ID");
 
-    const requestRemaining =
-      Number(data.remainingRequests ?? data.remaining_requests);
-
-    const tokenRemaining =
-      Number(data.remainingTokens ?? data.remaining_tokens);
-
-    if (Number.isFinite(requestRemaining)) {
-      $("#groqReqBar").style.width =
-        `${Math.max(0, Math.min(100, requestRemaining))}%`;
-    }
-
-    if (Number.isFinite(tokenRemaining)) {
-      $("#groqTokenBar").style.width =
-        `${Math.max(0, Math.min(100, tokenRemaining))}%`;
-    }
-
+    const reqPct = percent(Number(data.remainingRequests), Number(data.limitRequests));
+    const tokPct = percent(Number(data.remainingTokens), Number(data.limitTokens));
+    if (reqPct !== null) $("#groqReqBar").style.width = `${reqPct}%`;
+    if (tokPct !== null) $("#groqTokenBar").style.width = `${tokPct}%`;
   } catch (error) {
-    console.warn("Kuota Groq tidak tersedia:", error);
+    console.warn("Kuota Groq tidak tersedia:", error.message);
     $("#groqModelName").textContent = "Tidak tersedia";
   }
 }
 
-$("#refreshQuotaBtn").addEventListener("click", () => {
-  loadGroqQuota(true);
-});
+$("#refreshQuotaBtn").addEventListener("click", () => loadGroqQuota(true));
 
 // ===============================
 // MOBILE NAVIGATION
 // ===============================
 
 $("#mobileMenu")?.addEventListener("click", () => {
-  $(".nav-links").classList.toggle("open");
+  const open = $(".nav-links").classList.toggle("open");
+  $("#mobileMenu").setAttribute("aria-expanded", String(open));
 });
 
 document.querySelectorAll(".nav-links a").forEach(link => {
   link.addEventListener("click", () => {
     $(".nav-links").classList.remove("open");
+    $("#mobileMenu")?.setAttribute("aria-expanded", "false");
   });
 });
 
@@ -521,7 +644,7 @@ document.querySelectorAll(".nav-links a").forEach(link => {
 // ===============================
 
 async function initializeGlowberry() {
-  console.log("🍓 Glowberry website initialized");
+  await loadConfig();
 
   await Promise.allSettled([
     loadProducts(),
@@ -530,7 +653,10 @@ async function initializeGlowberry() {
     loadGroqQuota()
   ]);
 
-  botStatusTimer = setInterval(loadBotStatus, 10000);
+  // Polling status hanya jika gateway tersedia
+  if (gatewayUrl !== null) {
+    botStatusTimer = setInterval(loadBotStatus, 10000);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", initializeGlowberry);

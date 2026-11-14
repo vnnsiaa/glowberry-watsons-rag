@@ -1,16 +1,36 @@
 {
   "keywords": {
-    "jam buka": "jam buka",
-    "alamat": "alamat",
-    "lokasi": "alamat",
     "cara pesan": "cara pesan",
+    "cara order": "cara pesan",
     "order": "cara pesan",
-    "kontak": "kontak"
+    "pesan": "cara pesan",
+    "pemesanan": "cara pesan",
+    "cara beli": "cara pesan",
+    "cara membeli": "cara pesan",
+    "membeli": "cara pesan",
+    "checkout": "cara pesan",
+    "pembayaran": "pembayaran",
+    "bayar": "pembayaran",
+    "cod": "pembayaran",
+    "pengiriman": "pengiriman",
+    "kirim": "pengiriman",
+    "ongkir": "pengiriman",
+    "ongkos kirim": "pengiriman",
+    "link shopee": "link shopee",
+    "shopee": "link shopee",
+    "link": "link shopee",
+    "katalog": "katalog",
+    "daftar produk": "katalog",
+    "glowberry": "tentang glowberry",
+    "siapa kamu": "tentang glowberry",
+    "toko": "tentang glowberry"
   },
   "responses": {
-    "jam buka": "Toko kami buka setiap hari Senin - Sabtu pukul 09.00 - 20.00 WIB, dan Minggu pukul 10.00 - 17.00 WIB.",
-    "alamat": "Toko kami beralamat di Jl. Perhiasan No. 88, Pusat Emas & Permata, Jakarta.",
-    "cara pesan": "Untuk pemesanan, silakan sebutkan nama produk yang diinginkan atau pilih dari katalog kami, lalu konfirmasi pesanan melalui chat ini.",
-    "kontak": "Informasi Kontak Toko Aura Jewelry & Gold Atelier:\n📍 *Alamat:* Jl. Perhiasan No. 88, Pusat Emas & Permata, Jakarta\n📞 *Telepon / WA:* (021) 555-0199 / Chat WhatsApp ini\n⏰ *Jam Operasional:* Senin - Sabtu (09.00 - 20.00 WIB), Minggu (10.00 - 17.00 WIB)"
+    "cara pesan": "Untuk memesan produk, Kakak bisa memilih produk dari katalog Glowberry, lalu klik tombol Beli di Shopee untuk melanjutkan pembelian di toko Watsons Shopee. 💗",
+    "pembayaran": "Pembayaran dilakukan langsung di halaman checkout Shopee. Metode pembayaran yang tersedia mengikuti pilihan yang ditampilkan Shopee saat checkout ya, Kak. 🌷",
+    "pengiriman": "Untuk informasi pengiriman, ongkos kirim, dan estimasi tiba, Kakak bisa melihat detailnya langsung di halaman checkout Shopee ya. 🌷",
+    "link shopee": "Kakak bisa menemukan tautan pembelian pada setiap kartu produk di katalog Glowberry. Klik Beli di Shopee untuk melanjutkan transaksi. ✨",
+    "katalog": "Glowberry menyediakan katalog produk Watsons Shopee yang bisa Kakak lihat melalui halaman katalog. Ada berbagai pilihan produk untuk kebutuhan sehari-hari. 💗",
+    "tentang glowberry": "Glowberry adalah asisten belanja yang membantu Kakak menemukan produk beauty dan personal care dari katalog Watsons di Shopee. Transaksi tetap dilakukan di Shopee. ✨"
   }
 }

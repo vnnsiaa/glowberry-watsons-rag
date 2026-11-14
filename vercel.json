@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install --omit=dev --ignore-scripts",
+  "outputDirectory": "public",
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30,
+      "includeFiles": "{data/products.csv,knowledge.json}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:name.js",
+      "destination": "/api/:name"
+    },
+    {
+      "source": "/api/groq/:name.js",
+      "destination": "/api/groq/:name"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ]
+}

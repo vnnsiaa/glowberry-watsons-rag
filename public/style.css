@@ -1,4 +1,3 @@
-
 :root {
   --pink: #f4a5b8;
   --pink-dark: #d85d80;
@@ -41,7 +40,7 @@ button { cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255,250,244,.96);
+  background: var(--cream);
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
@@ -530,4 +529,94 @@ td a { color: var(--berry); }
   .product-name {
     min-height: 55px;
   }
+}
+
+/* =================================
+   GLOWBERRY - AUDIT FIXES
+================================= */
+
+/* Anchor (#products, #about) tidak tertutup navbar sticky */
+#home, #products, #about { scroll-margin-top: 90px; }
+
+/* Ikon pengganti bila gambar produk gagal dimuat */
+.product-image-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 46px;
+  opacity: .35;
+  z-index: 0;
+}
+/* Selama gambar ada, ikon pengganti disembunyikan (gambar dihapus saat error) */
+.product-image img + .product-image-fallback { display: none; }
+.product-tag { z-index: 2; }
+
+.product-actions .buy-link.disabled {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 42px;
+  border-radius: 30px;
+  background: #f3dce2;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.product-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.filter-chip:focus-visible,
+.buy-link:focus-visible,
+.quick-prompts button:focus-visible {
+  outline: 2px solid var(--pink-dark);
+  outline-offset: 2px;
+}
+
+/* Link Shopee di dalam jawaban chatbot */
+.message-content .chat-link {
+  display: inline-block;
+  margin: 2px 0;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--berry);
+  color: white;
+  font-weight: 700;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.message-content strong { color: var(--berry); }
+.user-message .message-content strong { color: white; }
+.quick-prompts button:disabled,
+.chat-input-area button:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Info WhatsApp Gateway & ringkasan knowledge */
+.gateway-info {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fff6e8;
+  border: 1px solid #f3dcb5;
+  color: #7a5a2c;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.gateway-info code { background: #fbe9cc; padding: 1px 5px; border-radius: 4px; }
+.admin-buttons button:disabled { opacity: .5; cursor: not-allowed; }
+.knowledge-summary { width: 100%; margin: 0 0 4px; }
+
+@media (max-width: 650px) {
+  #home, #products, #about { scroll-margin-top: 76px; }
+  .chat-window { max-height: calc(100dvh - 100px); }
+}
+
+/* Layar sentuh: efek hover tidak "menempel" pada chip yang tidak aktif */
+@media (hover: none) {
+  .filter-chip:not(.active):hover { background: white; color: #806b72; border-color: var(--line); }
 }
