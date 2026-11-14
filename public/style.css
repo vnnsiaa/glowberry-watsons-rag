@@ -426,3 +426,108 @@ td a { color: var(--berry); }
   .chat-launcher { right: 15px; bottom: 15px; }
   .quota-grid { grid-template-columns: 1fr; }
 }
+
+/* =================================
+   GLOWBERRY - PRODUCT CARD ALIGNMENT
+================================= */
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.product-image {
+  flex-shrink: 0;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.product-name {
+  min-height: 58px;
+}
+
+.product-price {
+  margin-top: auto;
+  margin-bottom: 13px;
+}
+
+.product-actions {
+  margin-top: auto;
+  width: 100%;
+}
+
+.product-actions a {
+  width: 100%;
+}
+
+/* GLOWBERRY PRODUCT CARD - FINAL ALIGNMENT */
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 15px;
+}
+
+.product-image {
+  height: 205px;
+  flex-shrink: 0;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 16px;
+}
+
+.product-category {
+  margin-bottom: 5px;
+}
+
+.product-name {
+  min-height: 58px;
+  margin: 5px 0 10px;
+  line-height: 1.55;
+}
+
+.product-price {
+  margin-top: 0;
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+.product-actions {
+  margin-top: auto;
+  width: 100%;
+}
+
+.product-actions a {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 42px;
+  width: 100%;
+  border-radius: 30px;
+}
+
+/* Responsive */
+@media (max-width: 650px) {
+  .product-image {
+    height: 155px;
+  }
+
+  .product-info {
+    padding: 12px;
+  }
+
+  .product-name {
+    min-height: 55px;
+  }
+}
