@@ -175,6 +175,33 @@ test("splitQuestions memecah pertanyaan dengan ?, baris baru, nomor, 'dan'", () 
   assert.deepEqual(splitQuestions("Berapa harga Pantene?"), ["Berapa harga Pantene"]);
 });
 
+test("splitQuestions memecah empat pertanyaan yang dipisahkan titik tanpa merusak URL, desimal, atau singkatan", () => {
+  assert.deepEqual(
+    splitQuestions("Apa produk termurah? Apa produk termahal? Sunscreen murah. Hada Labo termurah."),
+    ["Apa produk termurah", "Apa produk termahal", "Sunscreen murah", "Hada Labo termurah"]
+  );
+  assert.deepEqual(splitQuestions("Kadar 1.5%? Dr. Hada Labo. Sunscreen murah."), [
+    "Kadar 1.5%", "Dr. Hada Labo", "Sunscreen murah"
+  ]);
+  assert.deepEqual(splitQuestions("Cek https://example.com/path.v1 Hada Labo. Sunscreen murah."), [
+    "Cek https://example.com/path.v1 Hada Labo", "Sunscreen murah"
+  ]);
+});
+
+test("empat pertanyaan dipisahkan tanda titik menjalankan retrieval independen", () => {
+  const bot = new GlowberryChatbot({ env: {} });
+  const groups = bot.retrieve("Apa produk termurah? Apa produk termahal? Sunscreen murah. Hada Labo termurah.");
+  assert.equal(groups.length, 4);
+  assert.equal(groups[0].products[0].nama, "Vicee Lemon Tablet Strip 2'S");
+  assert.match(groups[1].products[0].nama, /^Labore/);
+  assert.ok(groups[2].products.length > 0);
+  assert.ok(groups[2].products.every(p => p.kategori === "Tabir Surya"));
+  assert.ok(groups[2].products.every((p, i, a) => i === 0 || a[i - 1].hargaAngka <= p.hargaAngka));
+  assert.ok(groups[3].products.length > 0);
+  assert.ok(groups[3].products.every(p => p.nama.startsWith("Hada Labo")));
+  assert.ok(groups[3].products.every((p, i, a) => i === 0 || a[i - 1].hargaAngka <= p.hargaAngka));
+});
+
 test("empat pertanyaan dalam satu pesan -> retrieval terpisah per pertanyaan", () => {
   const bot = new GlowberryChatbot({ env: {} });
   const groups = bot.retrieve(FOUR_QUESTIONS);
