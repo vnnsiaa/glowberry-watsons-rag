@@ -5,7 +5,8 @@ const {
   isGreeting,
   isGratitude,
   stripReasoning,
-  hasUsableKey
+  hasUsableKey,
+  splitQuestions
 } = require("../lib/chatbot");
 
 // Groq palsu: merekam request dan mengembalikan jawaban yang ditentukan
@@ -159,6 +160,85 @@ test("riwayat percakapan dipakai untuk pertanyaan lanjutan", async () => {
     ]
   });
   assert.match(groq.calls[0].messages[0].content, /Cetaphil Gentle Skin Cleanser/);
+});
+
+// ---------- Multi-question: produk antarpertanyaan tidak boleh tercampur ----------
+
+const FOUR_QUESTIONS = "Apa saja produk Hada Labo? Apa produk paling murah? Sunscreen murah? Produk termahal?";
+
+test("splitQuestions memecah pertanyaan dengan ?, baris baru, nomor, 'dan'", () => {
+  assert.deepEqual(splitQuestions(FOUR_QUESTIONS), [
+    "Apa saja produk Hada Labo", "Apa produk paling murah", "Sunscreen murah", "Produk termahal"
+  ]);
+  assert.deepEqual(splitQuestions("1. hada labo\n2. sunscreen murah"), ["hada labo", "sunscreen murah"]);
+  assert.deepEqual(splitQuestions("Hada Labo termurah dan sunscreen murah"), ["Hada Labo termurah", "sunscreen murah"]);
+  assert.deepEqual(splitQuestions("Berapa harga Pantene?"), ["Berapa harga Pantene"]);
+});
+
+test("empat pertanyaan dalam satu pesan -> retrieval terpisah per pertanyaan", () => {
+  const bot = new GlowberryChatbot({ env: {} });
+  const groups = bot.retrieve(FOUR_QUESTIONS);
+  assert.equal(groups.length, 4);
+
+  const [hada, cheapest, sun, priciest] = groups;
+  assert.ok(hada.products.every(p => p.nama.startsWith("Hada Labo")));
+  assert.equal(cheapest.products[0].nama, "Vicee Lemon Tablet Strip 2'S");
+  assert.ok(cheapest.products.every((p, i, a) => i === 0 || a[i - 1].hargaAngka <= p.hargaAngka));
+  assert.ok(sun.products.every(p => p.kategori === "Tabir Surya"));
+  assert.ok(sun.products.every((p, i, a) => i === 0 || a[i - 1].hargaAngka <= p.hargaAngka));
+  assert.match(priciest.products[0].nama, /^Labore/);
+  assert.ok(priciest.products.every((p, i, a) => i === 0 || a[i - 1].hargaAngka >= p.hargaAngka));
+});
+
+test("Hada Labo termurah + sunscreen murah dalam satu pesan tidak tercampur", () => {
+  const bot = new GlowberryChatbot({ env: {} });
+  const [hada, sun] = bot.retrieve("Hada Labo termurah dan sunscreen murah");
+  assert.ok(hada.products.every(p => p.nama.startsWith("Hada Labo")));
+  assert.equal(hada.products[0].harga, "24.000");
+  assert.ok(sun.products.every(p => p.kategori === "Tabir Surya"));
+});
+
+test("satu pertanyaan dengan 'dan' tetap diperlakukan sebagai satu pertanyaan", () => {
+  const bot = new GlowberryChatbot({ env: {} });
+  const groups = bot.retrieve("sunscreen murah dan bagus");
+  assert.equal(groups.length, 1);
+  assert.ok(groups[0].products.every(p => p.kategori === "Tabir Surya"));
+});
+
+test("multi-question: konteks Groq dibagi per pertanyaan", async () => {
+  const groq = fakeGroq(() => "ok");
+  const bot = new GlowberryChatbot({ groqClient: groq, env });
+  await bot.reply("Hada Labo termurah dan sunscreen murah");
+  const system = groq.calls[0].messages[0].content;
+  const [, part1, part2] = system.split(/=== PERTANYAAN \d+: /);
+  assert.ok(part1 && part2, "konteks harus memiliki 2 bagian");
+  assert.match(part1, /Hada Labo/);
+  assert.doesNotMatch(part1, /Emina|Azarine|Skin Aqua/);
+  assert.match(part2, /Emina|Azarine|Skin Aqua/);
+  assert.doesNotMatch(part2.split("INFORMASI LAYANAN")[0], /Hada Labo/);
+});
+
+test("multi-question: fallback tanpa Groq menjawab per pertanyaan", async () => {
+  const bot = new GlowberryChatbot({ env: {} });
+  const result = await bot.reply(FOUR_QUESTIONS);
+  const sections = result.reply.split(/\n\*/).slice(1);
+  assert.equal(sections.length, 4);
+  assert.match(sections[0], /^Apa saja produk Hada Labo\*/);
+  assert.doesNotMatch(sections[0], /Emina|Vicee|Labore/);
+  assert.match(sections[1], /Vicee/);
+  assert.match(sections[2], /Emina|Azarine|Skin Aqua/);
+  assert.doesNotMatch(sections[2], /Hada Labo/);
+  assert.match(sections[3], /Labore/);
+});
+
+test("pesan berurutan tanpa history tidak saling mencemari (web API stateless)", async () => {
+  const groq = fakeGroq(() => "ok");
+  const bot = new GlowberryChatbot({ groqClient: groq, env });
+  await bot.reply("Apa saja produk Hada Labo?");
+  await bot.reply("Sunscreen murah");
+  const second = groq.calls[1].messages;
+  assert.equal(second.length, 2, "hanya system + pertanyaan saat ini");
+  assert.doesNotMatch(second[0].content, /Hada Labo/);
 });
 
 test("kuota Groq diperbarui dari header respons", async () => {

@@ -333,19 +333,37 @@ function addTyping() {
   return typing;
 }
 
+// Antrean pesan: setiap pertanyaan dikirim SATU per SATU dan mendapat jawabannya
+// sendiri. Klik quick prompt beruntun tidak diproses paralel dan tidak dibuang.
+const chatQueue = [];
 let chatBusy = false;
 
-async function sendChatMessage(message) {
+function sendChatMessage(message) {
   const text = String(message || "").trim();
-  if (!text || chatBusy) return;
-
-  chatBusy = true;
-  addMessage(text, "user");
+  if (!text) return;
 
   $("#chatInput").value = "";
-  $("#sendChat").disabled = true;
-  document.querySelectorAll(".quick-prompts button").forEach(b => (b.disabled = true));
+  chatQueue.push(text);
+  processChatQueue();
+}
 
+async function processChatQueue() {
+  if (chatBusy) return;
+  chatBusy = true;
+
+  try {
+    while (chatQueue.length) {
+      await askGlowberry(chatQueue.shift());
+    }
+  } finally {
+    chatBusy = false;
+    $("#chatInput").focus();
+  }
+}
+
+async function askGlowberry(text) {
+  // Pertanyaan ditampilkan saat mulai diproses agar jawabannya tepat di bawahnya
+  addMessage(text, "user");
   const typing = addTyping();
 
   try {
@@ -370,11 +388,6 @@ async function sendChatMessage(message) {
     typing.remove();
     console.warn("Chatbot error:", error.message);
     addMessage("Aduh Kak, sepertinya koneksi sedang terganggu. Coba tanyakan lagi sebentar ya! 💗");
-  } finally {
-    chatBusy = false;
-    $("#sendChat").disabled = false;
-    document.querySelectorAll(".quick-prompts button").forEach(b => (b.disabled = false));
-    $("#chatInput").focus();
   }
 }
 
